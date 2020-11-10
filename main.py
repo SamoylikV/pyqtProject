@@ -2,16 +2,22 @@ import sys, random
 from PyQt5.QtWidgets import QMainWindow, QFrame, QDesktopWidget, QApplication
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QPainter, QColor
+import simpleaudio as sa
 
 
 class Tetris(QMainWindow):
-
+    """
+    Класс игры
+    """
     def __init__(self):
         super().__init__()
 
         self.initUI()
 
     def initUI(self):
+        """
+        инициализация главного окна
+        """
         self.tboard = Board(self)
         self.setCentralWidget(self.tboard)
 
@@ -26,13 +32,19 @@ class Tetris(QMainWindow):
         self.show()
 
     def center(self):
+        """
+        располагает игру по центру относительно экрана
+        """
         screen = QDesktopWidget().screenGeometry()
         size = self.geometry()
-        self.move((screen.width() - size.width()) / 2,
-                  (screen.height() - size.height()) / 2)
+        self.move((screen.width() - size.width()) // 2,
+                  (screen.height() - size.height()) // 2)
 
 
 class Board(QFrame):
+    """
+    поле игры
+    """
     msg2Statusbar = pyqtSignal(str)
 
     BoardWidth = 10
@@ -72,7 +84,9 @@ class Board(QFrame):
         return self.contentsRect().height() // Board.BoardHeight
 
     def start(self):
-
+        """
+        начало игры
+        """
         if self.isPaused:
             return
 
@@ -87,7 +101,9 @@ class Board(QFrame):
         self.timer.start(Board.Speed, self)
 
     def pause(self):
-
+        """
+        функция паузы
+        """
         if not self.isStarted:
             return
 
@@ -104,7 +120,10 @@ class Board(QFrame):
         self.update()
 
     def paintEvent(self, event):
-
+        """
+        отрисовка фигурок
+        :param event:
+        """
         painter = QPainter(self)
         rect = self.contentsRect()
 
@@ -129,7 +148,9 @@ class Board(QFrame):
                                 self.curPiece.shape())
 
     def keyPressEvent(self, event):
-
+        """
+        обработка нажатий на клавиатурру для поворота фигурок
+        """
         if not self.isStarted or self.curPiece.shape() == Tetrominoe.NoShape:
             super(Board, self).keyPressEvent(event)
             return
@@ -165,6 +186,9 @@ class Board(QFrame):
             super(Board, self).keyPressEvent(event)
 
     def timerEvent(self, event):
+        """
+        фунцкия спуска фигурок
+        """
 
         if event.timerId() == self.timer.timerId():
 
@@ -178,12 +202,16 @@ class Board(QFrame):
             super(Board, self).timerEvent(event)
 
     def clearBoard(self):
-
+        """
+        очистить поле
+        """
         for i in range(Board.BoardHeight * Board.BoardWidth):
             self.board.append(Tetrominoe.NoShape)
 
     def dropDown(self):
-
+        """
+        функция ускоренного спуска фигурок
+        """
         newY = self.curY
 
         while newY > 0:
@@ -201,7 +229,9 @@ class Board(QFrame):
             self.pieceDropped()
 
     def pieceDropped(self):
-
+        """
+        вызывается после достижения фигурки низа поля
+        """
         for i in range(4):
             x = self.curX + self.curPiece.x(i)
             y = self.curY - self.curPiece.y(i)
@@ -213,7 +243,9 @@ class Board(QFrame):
             self.newPiece()
 
     def removeFullLines(self):
-
+        """
+        вызывается при сборе полной линии от края до края поля и удаляет ее
+        """
         numFullLines = 0
         rowsToRemove = []
 
@@ -246,20 +278,27 @@ class Board(QFrame):
             self.update()
 
     def newPiece(self):
-
+        """
+        задаем новую фигурку
+        """
         self.curPiece = Shape()
         self.curPiece.setRandomShape()
         self.curX = Board.BoardWidth // 2 + 1
         self.curY = Board.BoardHeight - 1 + self.curPiece.minY()
 
         if not self.tryMove(self.curPiece, self.curX, self.curY):
+            stop = True
             self.curPiece.setShape(Tetrominoe.NoShape)
             self.timer.stop()
             self.isStarted = False
             self.msg2Statusbar.emit("Game over")
+            wave_obj = sa.WaveObject.from_wave_file("lose.wav")
+            play_obj = wave_obj.play()
 
     def tryMove(self, newPiece, newX, newY):
-
+        """
+        поворачивает фигурки на поле
+        """
         for i in range(4):
 
             x = newX + newPiece.x(i)
@@ -280,6 +319,10 @@ class Board(QFrame):
 
     def drawSquare(self, painter, x, y, shape):
 
+        """
+            Создание фигур по квадратам
+        """
+
         colorTable = [0x000000, 0xCC6666, 0x66CC66, 0x6666CC,
                       0xCCCC66, 0xCC66CC, 0x66CCCC, 0xDAAA00]
 
@@ -299,6 +342,9 @@ class Board(QFrame):
 
 
 class Tetrominoe(object):
+    """
+    количество видов фигур
+    """
     NoShape = 0
     ZShape = 1
     SShape = 2
@@ -310,6 +356,9 @@ class Tetrominoe(object):
 
 
 class Shape(object):
+    """
+    класс формовки
+    """
     coordsTable = (
         ((0, 0), (0, 0), (0, 0), (0, 0)),
         ((0, -1), (0, 0), (-1, 0), (-1, 1)),
@@ -403,7 +452,7 @@ class Shape(object):
         return result
 
     def rotateRight(self):
-
+        
         if self.pieceShape == Tetrominoe.SquareShape:
             return self
 
@@ -418,6 +467,9 @@ class Shape(object):
 
 
 if __name__ == '__main__':
+    # запуск
     app = QApplication([])
     tetris = Tetris()
+    wave_obj = sa.WaveObject.from_wave_file("theme.wav")
+    play_obj = wave_obj.play()
     sys.exit(app.exec_())
