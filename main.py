@@ -1,4 +1,6 @@
 import sys, random
+from score import MyWidget
+from hez import ClssDialog
 from PyQt5.QtWidgets import QMainWindow, QFrame, QDesktopWidget, QApplication
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QPainter, QColor
@@ -9,6 +11,7 @@ class Tetris(QMainWindow):
     """
     Класс игры
     """
+
     def __init__(self):
         super().__init__()
 
@@ -277,9 +280,13 @@ class Board(QFrame):
             self.curPiece.setShape(Tetrominoe.NoShape)
             self.update()
 
+    def call_score(self, score_val):
+        dialog = MyWidget(score_val, self)
+        dialog.exec_()
+
     def newPiece(self):
         """
-        задаем новую фигурку
+        задаем новую фигурку и еще функция пройгрыша
         """
         self.curPiece = Shape()
         self.curPiece.setRandomShape()
@@ -287,13 +294,18 @@ class Board(QFrame):
         self.curY = Board.BoardHeight - 1 + self.curPiece.minY()
 
         if not self.tryMove(self.curPiece, self.curX, self.curY):
-            stop = True
+            wave_obj = sa.WaveObject.from_wave_file("lose.wav")
+            play_obj = wave_obj.play()
+            self.msg2Statusbar.emit("Game over")
+            self.call_score(int(self.numLinesRemoved))
             self.curPiece.setShape(Tetrominoe.NoShape)
             self.timer.stop()
             self.isStarted = False
-            self.msg2Statusbar.emit("Game over")
-            wave_obj = sa.WaveObject.from_wave_file("lose.wav")
-            play_obj = wave_obj.play()
+            # app = QApplication(sys.argv)
+            # ex = MyWidget(self)
+            # ex.exec_()
+            # sys.exit(app.exec())
+
 
     def tryMove(self, newPiece, newX, newY):
         """
@@ -357,8 +369,13 @@ class Tetrominoe(object):
 
 class Shape(object):
     """
-    класс формовки
+    класс фигур
     """
+
+    """
+    Сами фигуры
+    """
+
     coordsTable = (
         ((0, 0), (0, 0), (0, 0), (0, 0)),
         ((0, -1), (0, 0), (-1, 0), (-1, 1)),
@@ -381,6 +398,9 @@ class Shape(object):
         return self.pieceShape
 
     def setShape(self, shape):
+        """
+        инициализация фигуры
+        """
 
         table = Shape.coordsTable[shape]
 
@@ -391,7 +411,14 @@ class Shape(object):
         self.pieceShape = shape
 
     def setRandomShape(self):
+        """
+        выбор случайной фигуры
+        """
         self.setShape(random.randint(1, 7))
+
+    """
+    методы для работы с координатами
+    """
 
     def x(self, index):
         return self.coords[index][0]
@@ -438,6 +465,9 @@ class Shape(object):
         return m
 
     def rotateLeft(self):
+        """
+        поворот фигуры влево
+        """
 
         if self.pieceShape == Tetrominoe.SquareShape:
             return self
@@ -452,7 +482,9 @@ class Shape(object):
         return result
 
     def rotateRight(self):
-        
+        """
+        поворот фигуры вправо
+        """
         if self.pieceShape == Tetrominoe.SquareShape:
             return self
 
@@ -466,6 +498,7 @@ class Shape(object):
         return result
 
 
+
 if __name__ == '__main__':
     # запуск
     app = QApplication([])
@@ -473,3 +506,4 @@ if __name__ == '__main__':
     wave_obj = sa.WaveObject.from_wave_file("theme.wav")
     play_obj = wave_obj.play()
     sys.exit(app.exec_())
+
